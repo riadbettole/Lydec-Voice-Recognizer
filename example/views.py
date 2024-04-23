@@ -161,7 +161,7 @@ def api_gpt4(request):
                 max_tokens=500,
             )
         except Exception as e:
-            return JsonResponse({'error': 'Error gpt4 ' + e}, status=400)
+            return JsonResponse({'error': 'Error gpt4 ' + str(e)}, status=400)
         response2 = response.choices[0]
         response3 = response2.message
         response4 = response3.content
