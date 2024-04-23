@@ -95,7 +95,8 @@ def save_audio(request):
 def admin(request):
     return render(request, 'admin.html')
 
-
+def test(request):
+    return render(request, 'test.html')
 
 # example/views.py
 
@@ -128,16 +129,11 @@ def rot13_encrypt2(input_string):
 os.environ["OPENAI_API_KEY"] = rot13_encrypt2("fx-cebw-YBlVcFEOf92bDUbcQATmG3OyoxSWTNJh8mm11FPdrYA9V3zU")
 
 def api_gpt4(request):
-    # image_local = './image.png'
-    
     if request.method == 'POST':
         base64_image = request.POST.get('base64_image')
         prompt = request.POST.get('prompt')
-    
-        # image_url = f"data:image/jpeg;base64,{encode_image(base64_image)}"
 
         client = OpenAI()
-
         try:
             response = client.chat.completions.create(
                 model='gpt-4-vision-preview',

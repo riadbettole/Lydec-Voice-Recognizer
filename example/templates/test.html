@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tahalil.Ai</title>
+    <link rel="icon" type="image/png" href="assets/img/logo.png">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Merriweather&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.3/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://npmcdn.com/pdfjs-dist@2.9.359/web/pdf_viewer.css">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        #drop-area {
+            border: 2px dashed #ccc;
+            border-radius: 20px;
+            width: 300px;
+            margin: 25px auto;
+            padding: 20px;
+            text-align: center;
+            cursor: pointer;
+        }
+
+        #drop-area p {
+            margin: 0;
+        }
+
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+    <script src="https://npmcdn.com/pdfjs-dist@2.9.359/web/pdf_viewer.js"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div class="container mx-auto py-10 px-4">
+        <div class="flex flex-wrap -mx-4">
+            <div class="w-full px-4" style="margin-top: 50px;" id="ismail">
+                <form id="docForm" class="bg-white p-6 rounded shadow-lg" >
+                    <div id="docTextContainer" class="mb-4 hidden">
+                        <label for="doc" class="block text-sm font-medium">doc text:</label>
+                        <textarea id="doc" rows="10" class="w-full p-2 mt-1 border border-gray-200 rounded"></textarea>
+                    </div>
+                    <div class="mb-4">
+                        <label for="uploaddoc" id="uploaddo" class="block text-sm font-medium">Upload Document (PDF):</label>
+                        <input type="file" id="uploaddoc" class="mt-1" accept="application/pdf" style="display: none;">
+                        <!-- <div id="drop-area" ondrop="dropHandler(event);" ondragover="dragOverHandler(event);" onclick="document.getElementById('uploaddoc').click();">
+                            <p>Drop files here or click to select files</p>
+                        </div> -->
+                        <h1>File Upload</h1>
+                        <input type="file" id="fileInput">
+                        <button type="button" onclick="uploadFile()">Upload</button>
+                        <div id="status">
+                            
+                        </div>
+                    </div>
+                    <br>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Question</label>
+                        <input type="text" name="question" id="question" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                    </div>
+                    <br>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Language</label>
+                        <select name="language" id="language" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm">
+                            <option value="Arabic">Arabic</option>
+                            <option value="French">French</option>
+                            <option value="English">English</option>
+                            <option value="Spanish">Spanish</option>
+                        </select>
+                    </div>
+                    <br><br>
+                    <div style="display: flex; justify-content: center;">
+                        <button type="submit" id="analyzeButton" class="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-800 hidden">Simplify My Report!</button>
+                    </div>
+                </form>
+                
+            </div>
+            <section id="output" class="bg-white p-6 mt-8 mb-10 rounded shadow-lg text-gray-900 hidden"></section>
+            <div class="w-full lg:w-1/2 px-4 hidden">
+                <div id="pdfPreview" class="bg-white p-6 rounded shadow-lg h-[500px] overflow-auto hidden"></div>
+                <div class="flex justify-center mt-4">
+                    <button id="previousButton" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 mr-4 hidden">Previous</button>
+                    <button id="nextButton" class="bg-green-700 text-white px-4 py-2 rounded hover:bg-green-800 hidden">Next</button>
+                </div>
+                <p id="pageInfo" class="text-center mt-2 hidden"></p>
+            </div>
+        </div>
+    </div>
+    <script>
+let pdf;
+let currentPage = 1;
+
+function uploadFile() {
+    const fileInput = document.getElementById('fileInput');
+    const status = document.getElementById('status');
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+    console.log(fileInput.files[0])
+
+    const file = fileInput.files[0];
+    const reader = new FileReader();
+    reader.onload = function(event) {
+        const base64String = event.target.result.split(',')[1];
+        console.log(base64String);
+        prompt("data:image/jpeg;base64,"+base64String)
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function prompt(base64_image){
+    const apiUrl = 'https://br29vaymv0.execute-api.eu-north-1.amazonaws.com/my_gpt4_stage';
+    // const promptTemplate = `you are an ai service named Ai تحاليل that help patient and people with health and medical issues by summirizing in a very simple languge and normal basic way using simpe words and give detailed informations from the medical report provided and explaining it, and you should give the user also insights and explain his condition and telling him if its dangered or no and help them understand it and even give him advices, and always tell him at the end that he need to consult the doctor for more informations also answer: "${question}"  in the response and explain and translate everything to  ${language}. Data : ${docText}`;
+    const promptTemplate = `Describe this image`;
+    const data = {
+        prompt: promptTemplate,
+        base64_image: base64_image
+    };
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type':'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type',
+            'Access-Control-Allow-Credentials': true,
+        },
+        body: JSON.stringify(data),
+    };
+
+    fetch(apiUrl, options)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            print(response)
+            return response.json();
+        })
+        .then(data => {
+            output.text = data
+            print(data)
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
+  }
+
+function updatePageInfo() {
+    const pageInfo = document.getElementById("pageInfo");
+    pageInfo.innerText = `${currentPage} / ${pdf.numPages}`;
+    pageInfo.classList.toggle("hidden", pdf.numPages === 1);
+}
+
+async function updatePdfView() {
+    document.getElementById("previousButton").disabled = currentPage <= 1;
+    document.getElementById("nextButton").disabled = currentPage >= pdf.numPages;
+
+    updatePageInfo();
+
+    const page = await pdf.getPage(currentPage);
+    const canvas = document.createElement("canvas");
+    const context = canvas.getContext("2d");
+    const viewport = page.getViewport({ scale: 1.0 });
+    canvas.height = viewport.height;
+    canvas.width = viewport.width;
+    const renderContext = {
+        canvasContext: context,
+        viewport: viewport,
+    };
+
+    await page.render(renderContext);
+    const pdfPreview = document.getElementById("pdfPreview");
+    pdfPreview.innerHTML = '';
+    pdfPreview.appendChild(canvas);
+}
+
+document.getElementById("previousButton").addEventListener("click", () => {
+    currentPage--;
+    updatePdfView();
+});
+document.getElementById("nextButton").addEventListener("click", () => {
+    currentPage++;
+    updatePdfView();
+});
+
+document.getElementById("docForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+
+    
+    document.getElementById("output").classList.remove("hidden");
+    document.getElementById("ismail").classList.add("hidden");
+    
+    
+    
+    const question = document.getElementById("question").value;
+    const language = document.getElementById("language").value;
+
+    const docText = document.getElementById("doc").value;
+    
+
+    if (!docText.trim()) {
+        alert('No text was extracted from your PDF. Try with a different file.');
+        return;
+    }
+
+
+    const promptTemplate = `you are an ai service named Ai تحاليل that help patient and people with health and medical issues by summirizing in a very simple languge and normal basic way using simpe words and give detailed informations from the medical report provided and explaining it, and you should give the user also insights and explain his condition and telling him if its dangered or no and help them understand it and even give him advices, and always tell him at the end that he need to consult the doctor for more informations also answer: "${question}"  in the response and explain and translate everything to  ${language}. Data : ${docText}`;
+    
+
+    console.log(promptTemplate);
+    
+    const output = document.getElementById("output");
+    output.innerText = "";
+
+    const apiUrl = 'https://br29vaymv0.execute-api.eu-north-1.amazonaws.com/my_gpt4_stage';
+
+    const data = {
+        prompt: promptTemplate,
+        base64_image: 'Your base64 encoded image here'
+    };
+
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+    };
+
+    fetch(apiUrl, options)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            output.text = data
+            // Handle the response data here
+        })
+        .catch(error => {
+            console.error('There was a problem with the fetch operation:', error);
+        });
+
+    //const ws = new WebSocket(wss://backend.buildpicoapps.com/ask_ai_streaming_v2);
+
+    // ws.addEventListener("open", () => {
+    //     ws.send(
+    //         JSON.stringify({
+    //             appId: "treatment-enter",
+    //             prompt: promptTemplate
+    //         })
+    //     );
+    // });
+
+//     ws.addEventListener("message", (event) => {
+        
+//         output.innerText = ${output.innerText}${event.data};
+//     });
+
+//     ws.addEventListener("close", (event) => {
+//         console.log("Connection closed", event.code, event.reason);
+//         if (event.code != 1000) {
+//             alert("Oops, we ran into an error. Refresh the page and try again.");
+//         }
+//     });
+
+//     ws.addEventListener("error", (error) => {
+//         console.log('WebSocket error', error);
+//         alert("Oops, we ran into an error. Refresh the page and try again.");
+//     });
+
+
+});
+
+document.getElementById("uploaddoc").addEventListener("change", async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    try {
+        const pdfBuffer = await file.arrayBuffer();
+        pdf = await pdfjsLib.getDocument({ data: pdfBuffer }).promise;
+        let extractedText = '';
+
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+            const page = await pdf.getPage(pageNumber);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+
+            extractedText += `${pageText} `;
+        }
+
+        document.getElementById("doc").value = extractedText.trim();
+
+        // Hide file input and textarea
+        // document.getElementById("docTextContainer").classList.add("hidden");
+        // document.getElementById("uploaddoc").classList.add("hidden");
+        // document.getElementById("uploaddo").classList.add("hidden");
+        document.getElementById("pdfPreview").classList.remove("hidden");
+        document.getElementById("analyzeButton").classList.remove("hidden");
+        
+
+        // Display the PDF preview
+        currentPage = 1;
+        await updatePdfView();
+
+        // Show the previous/next buttons and page info, if doc has more than 1 page
+        if (pdf.numPages > 1) {
+            document.getElementById("previousButton").classList.remove("hidden");
+            document.getElementById("nextButton").classList.remove("hidden");
+        } else {
+            document.getElementById("previousButton").classList.add("hidden");
+            document.getElementById("nextButton").classList.add("hidden");
+        }
+
+    } catch (error) {
+        console.error('Error extracting text from PDF', error);
+        alert("Oops, we couldn't extract text from this PDF. Please try another file.");
+    }
+});
+
+    </script>
+</body>
+
+</html>
