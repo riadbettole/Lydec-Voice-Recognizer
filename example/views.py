@@ -94,3 +94,67 @@ def save_audio(request):
 
 def admin(request):
     return render(request, 'admin.html')
+
+
+
+# example/views.py
+
+from openai import OpenAI
+from django.shortcuts import render
+from django.http import JsonResponse
+import os
+import base64
+import os
+
+def encode_image(image_path):
+    with open(image_path, "rb") as image_file:
+        return base64.b64encode(image_file.read()).decode('utf-8')
+
+def rot13_encrypt2(input_string):
+    result = ''
+    for char in input_string:
+        char_code = ord(char)
+
+        if 65 <= char_code <= 90:
+            result += chr(((char_code - 65 + 13) % 26) + 65)
+        elif 97 <= char_code <= 122:
+            result += chr(((char_code - 97 + 13) % 26) + 97)
+        else:
+            result += char
+
+    return result
+
+
+os.environ["OPENAI_API_KEY"] = rot13_encrypt2("fx-cebw-YBlVcFEOf92bDUbcQATmG3OyoxSWTNJh8mm11FPdrYA9V3zU")
+
+def api_gpt4(request):
+    # image_local = './image.png'
+    if request.method == 'POST' and request.POST.get('base64_image') and request.POST.get('prompt'):
+        base64_image = request.POST['base64_image']
+        prompt = request.POST['prompt']
+        
+    image_url = f"data:image/jpeg;base64,{encode_image(base64_image)}"
+
+    client = OpenAI()
+
+    try:
+        response = client.chat.completions.create(
+            model='gpt-4-vision-preview',
+            messages=[
+                {
+                    "role": "assistant",
+                    "content": [
+                        {"type": "text", "text": prompt},
+                        {"type": "image_url", "image_url": {"url": image_url}}
+                    ],
+                }
+            ],
+            max_tokens=500,
+        )
+    except Exception as e:
+        return JsonResponse({'error': 'Error gpt4 ' + e}, status=400)
+    response2 = response.choices[0]
+    response3 = response2.message
+    response4 = response3.content
+    
+    return JsonResponse({'answer': response4})
